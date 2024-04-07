@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root {
+  --primary-color: #1BA397;
+  --secondary-color: #2fb9ae;
+}
+body{
+  font-family: Inter, sans-serif;
+}
+.ant-btn-primary {
+  background-color: rgb(27 99 242)
+}
+.ant-btn-primary:hover {
+  background-color: rgb(30 66 159 / var(--tw-bg-opacity));;
+}
+.custom-dropdown-menu {
+  width: 200px; 
+  height: 300px; 
+}
+.PhoneInputCountryIcon img {
+  border-radius: 0.2rem;
+  width: 3rem;
+}
+.PhoneInputCountrySelect {
+  width: 1rem;
+  margin-left: 1rem;
+  padding: 10px;
+  top: auto !important;
+  bottom: 0 !important;
+}
+.PhoneInputCountry {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+}
+
+.PhoneInputInput {
+  padding: 0.5rem;
+  background: white;
+  border-width: 1px;
+  border-color: #c6cfe5;
+  border-radius: 5px;
+  font-size: 1.1rem;
+  font-weight: 400;
+  margin-left: 1rem;
+  height: 35px;
+  width: 100%;
+}
+
+.PhoneInput {
+  display: flex;
+  height: 35px;
+  width: 100%;
+  align-items: center;
+  border-radius: 5%;
+}

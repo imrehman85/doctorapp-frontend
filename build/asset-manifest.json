@@ -1,0 +1,31 @@
+{
+  "files": {
+    "main.css": "/static/css/main.82262eac.css",
+    "main.js": "/static/js/main.c7592654.js",
+    "static/js/453.0a36081d.chunk.js": "/static/js/453.0a36081d.chunk.js",
+    "static/media/loginP.png": "/static/media/loginP.196dd8dd8a175622165f.png",
+    "static/media/teethwebImg.png": "/static/media/teethwebImg.83be9547ba0ca053e92c.png",
+    "static/media/logo.png": "/static/media/logo.82d31296ea66643ba337.png",
+    "static/media/noData.gif": "/static/media/noData.577e651de24a0afcebc4.gif",
+    "static/media/teaths.jpg": "/static/media/teaths.2f3a019b9add27d8268c.jpg",
+    "static/media/view.png": "/static/media/view.c19b9e3590579a3ec888.png",
+    "static/media/hide.png": "/static/media/hide.54b3107d160578572bcc.png",
+    "index.html": "/index.html",
+    "static/media/clock.svg": "/static/media/clock.6023f32c065228c321a416ab92896bfe.svg",
+    "static/media/notification.svg": "/static/media/notification.7281b24cca2c0e71e1e1d2757b145f53.svg",
+    "static/media/search.svg": "/static/media/search.ebe1e314e096a6ad2cfc2797b72103d8.svg",
+    "static/media/Lower.svg": "/static/media/Lower.ab64e7381af083abe4359abcedd8bc2e.svg",
+    "static/media/Upper.svg": "/static/media/Upper.8bc4879c6f9bf09891410c2c1d90e09c.svg",
+    "static/media/hamburger.svg": "/static/media/hamburger.6eed5d7ce2dc25fbffd43f489dd4de31.svg",
+    "static/media/Right.svg": "/static/media/Right.ba703b14ff31f234b799d4e1370e2783.svg",
+    "static/media/Left.svg": "/static/media/Left.810fb35c7257f05c0530c9f583839ca7.svg",
+    "static/media/Center.svg": "/static/media/Center.659ecbfa471c1401e42cd2ef2ea32baa.svg",
+    "main.82262eac.css.map": "/static/css/main.82262eac.css.map",
+    "main.c7592654.js.map": "/static/js/main.c7592654.js.map",
+    "453.0a36081d.chunk.js.map": "/static/js/453.0a36081d.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.82262eac.css",
+    "static/js/main.c7592654.js"
+  ]
+}
