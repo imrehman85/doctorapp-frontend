@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import profile from "../../Images/profile.png";
+import logo from "../../Images/logo.png";
 import { Button, Select } from "antd";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
@@ -7,7 +8,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import PhoneInput from "react-phone-number-input";
 import { LeftOutlined } from "@ant-design/icons";
 const { Option } = Select;
-let file;
+let file="";
 const ProfileDetails = () => {
   const router = useNavigate();
   const [prompt, setPrompt] = useState("");
@@ -16,7 +17,10 @@ const ProfileDetails = () => {
   const token = useSelector((state) => state.token);
   const emailId = useSelector((state) => state.idSet);
   const dataUser = useSelector((state) => state.dataUser);
+  const reset = useSelector((state) => state.reset);
   const [image, setImage] = useState("");
+  const [show, setShow] = useState("");
+  const [err, setErr] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState(null);
   const [fName, setFName] = useState("");
@@ -70,7 +74,7 @@ const ProfileDetails = () => {
         ? dataUser?.roles?.$values[0]
         : null);
     }
-  }, []);
+  }, [reset]);
   const imageHandler = async (e) => {
     file = e.target.files[0];
     const base641 = await convertToBase64(file);
@@ -89,6 +93,47 @@ const ProfileDetails = () => {
     });
   }
   const AddHandler = (e) => {
+    if(fName==="")
+    {
+      setErr("Please add First name")
+      setShow(true)
+    }
+    else if(lName==="")
+    {
+      setErr("Please add Last name")
+      setShow(true)
+    }
+    else if(userName==="")
+    {
+      setErr("Please add User name")
+      setShow(true)
+    }
+    else if(email==="")
+    {
+      setErr("Please add Email")
+      setShow(true)
+    }
+    else if(prompt==="")
+    {
+      setErr("Please add Phone Number")
+      setShow(true)
+    }
+    else if(file==="")
+    {
+      setErr("Please add Profile image")
+      setShow(true)
+    }
+    else if(role===null)
+    {
+      setErr("Please add Role")
+      setShow(true)
+    }
+    else if(clinic==="")
+    {
+      setErr("Please add Clinic Name")
+      setShow(true)
+    }
+    else{
     let formData = new FormData();
     formData.append("firstName", fName);
     formData.append("lastName", lName);
@@ -112,10 +157,13 @@ const ProfileDetails = () => {
             },
           }
         )
-        .then((data) => {})
+        .then((data) => {
+          setErr("Clinic Updated")
+          setShow("true")
+        })
         .catch((err) => {});
     }
-  };
+  }}
   console.log(role);
   return (
     <main>
@@ -304,12 +352,8 @@ const ProfileDetails = () => {
                   onChange={(value) => setRole(value)}
                   className="block w-full h-[3rem] p-2 mb-2 text-sm text-gray-900 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                 >
-                  <Option value="Treatment Planner">Treatment Planner</Option>
-                  <Option value="Production Manager">Production Manager</Option>
-                  <Option value="Delivery Coordinator">
-                    Delivery Coordinator
-                  </Option>
-                  <Option value="Lab Admin">Lab Admin</Option>
+                  <Option value="Doctor">Doctor</Option>
+                  <Option value="Dental laboratory">Dental laboratory</Option>
                 </Select>
               </div>
             </div>
@@ -321,6 +365,27 @@ const ProfileDetails = () => {
               <span className="false">Save Changes</span>
             </Button>
           </form>
+        </div>
+      </div>
+      <div
+        className={`${
+          show ? "" : "hidden"
+        } w-[100%] h-[100%] z-[500] fixed top-0 left-0 bg-slate-500/50 flex justify-center items-center`}
+      >
+        <div className="relative rounded-xl w-[20rem] pb-6 flex items-center p-3 bg-white flex-col">
+          <div
+            className="absolute top-[8px] right-[40%]"
+            onClick={() => setShow(false)}
+          >
+            <img src={logo} alt="" className="w-[5rem] h-[4rem]" />
+          </div>
+          <p className="text-center mt-[5rem] mb-[2rem]">{err}</p>
+          <button
+            onClick={() => setShow(false)}
+            className="cursor-pointer rounded-xl pt-[0.5rem] pb-[0.5rem] pl-10 pr-10 text-white bg-[#DE2827] w-[60%]"
+          >
+            Ok
+          </button>
         </div>
       </div>
     </main>

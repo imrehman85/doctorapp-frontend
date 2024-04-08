@@ -1,7 +1,7 @@
 import React from "react";
 import noData from "../../Images/noData.gif";
 import { useState } from "react";
-import { Popover } from "antd";
+import { Popover, Pagination } from "antd";
 import { useEffect } from "react";
 import axios from "axios";
 import { Radio, Button } from "antd";
@@ -9,36 +9,78 @@ import { useNavigate } from "react-router-dom";
 import { LeftOutlined, SearchOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
 import { useDispatch } from "react-redux";
+let inqColumnHeaders;
 const Inquiries = () => {
   const router = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.option);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const token = useSelector((state) => state.token);
   const reset = useSelector((state) => state.reset);
+  const [search, setSearch] = useState("");
+  const [totalRows, setTotalRows] = useState(0);
   const [inquiries, setInquiries] = useState([]);
+  const [pagewithsearch, setPagewithsearch] = useState(1);
+  const [status, setStatus] = useState("Pending");
 
-  const inqColumnHeaders = [
-    "Case Id",
-    "Patient Name/ID",
-    "Patient Gender",
-    "Patient Age",
-    "Impression Type",
-    "Status",
-    "Action",
-  ];
+  useEffect(() => {
+    if (status === "Pending") {
+      inqColumnHeaders = [
+        "Case Id",
+        "Patient Name/ID",
+        "Patient Gender",
+        "Patient Age",
+        "Impression Type",
+        "Status",
+        "Action",
+      ];
+    } else {
+      inqColumnHeaders = [
+        "Case Id",
+        "Patient Name/ID",
+        "Patient Gender",
+        "Patient Age",
+        "Impression Type",
+        "Status",
+      ];
+    }
+  }, [status]);
+
+  useEffect(() => {
+    setTotalPages(Math.ceil(totalRows / 6));
+    console.log(totalRows, totalPages, "total");
+  }, [totalRows]);
   useEffect(() => {
     axios
-      .get(`http://91.108.104.16:5000/api/Case/get-all-cases`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      .get(
+        `http://91.108.104.16:5000/api/Case/get-${status}-case?pageNumber=${page}&pageSize=6`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
       .then((data) => {
         console.log(data);
-        setInquiries(data?.data?.$values);
+        setInquiries(data?.data?.cases?.$values);
+        setTotalPages(Math.ceil(data?.data?.count / 6));
       })
       .catch((err) => {});
-  }, [reset]);
+  }, [reset, status, page]);
+
+  const handleStatusChange = (e) => {
+    setStatus(e.target.value);
+  };
+  const pageHandler = (e) => {
+    if (search) {
+      // If searching, update searchPage
+      setPagewithsearch(e);
+    } else {
+      // If not searching, update page
+      setPage(e);
+    }
+  };
   return (
     <main className="w-full flex items-center justify-center flex-col">
       <div className="w-[95%] flex justify-center">
@@ -74,7 +116,8 @@ const Inquiries = () => {
                           className="block p-2.5 pl-10 w-full z-20 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-l-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:border-blue-500"
                           placeholder="Search"
                           required=""
-                          value=""
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
                         />
                       </div>
                     </div>
@@ -87,17 +130,18 @@ const Inquiries = () => {
                         Show Only: &nbsp;
                       </span>
                       <div className="flex">
-                        <Radio.Group defaultValue="New Inquiries">
-                          <Radio value="New Inquiries" className="mr-2.5">
+                        <Radio.Group
+                          defaultValue="Pending"
+                          onChange={handleStatusChange}
+                        >
+                          <Radio value="Pending" className="mr-2.5">
                             New Inquiries
                           </Radio>
-                          <Radio value="Pending Approval" className="mr-2.5">
+                          <Radio value="inreview" className="mr-2.5">
                             Pending Approval
                           </Radio>
-                          <Radio value="Pending Revisions">
-                            Pending Revisions
-                          </Radio>
-                          <Radio value="Pending Complete">
+                          <Radio value="reviewed">Pending Revisions</Radio>
+                          <Radio value="pending-completed">
                             Pending Complete
                           </Radio>
                           <Radio value="Completed">Completed</Radio>
@@ -174,25 +218,46 @@ const Inquiries = () => {
                                   {inq.status}
                                 </span>
                               </td>
-                              <td
-                                className="px-3 py-5"
-                                style={{ whiteSpace: "nowrap" }}
-                              >
-                                <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    dispatch({
-                                      type: "setCaseId",
-                                      num: inq.caseId,
-                                    });
-                                    router("/dashboard/inquiryEdit");
-                                  }}
-                                  type="primary"
-                                  className="rounded-lg h-[40px] text-white bg-[#1890ff] px-3 py-2.5 mr-2 mb-2 w-[6rem] text-sm font-sans font-medium flex items-center justify-center"
+                              {status === "Pending" && (
+                                <td
+                                  className="px-3 py-5"
+                                  style={{ whiteSpace: "nowrap" }}
                                 >
-                                  Pick Task
-                                </Button>
-                              </td>
+                                  <Button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      axios
+                                        .post(
+                                          `http://91.108.104.16:5000/api/case/pick-case?id=${inq.caseId}`,
+                                          null,
+                                          {
+                                            headers: {
+                                              Authorization: `Bearer ${token}`,
+                                            },
+                                          }
+                                        )
+                                        .then((data) => {
+                                          dispatch({
+                                            type: "setCaseId",
+                                            num: inq.caseId,
+                                          });
+                                          router("/dashboard/inquiry");
+                                        })
+                                        .catch((err) => {
+                                          console.error(
+                                            "Error during API request:",
+                                            err
+                                          );
+                                          // Add any necessary error handling here
+                                        });
+                                    }}
+                                    type="primary"
+                                    className="rounded-lg h-[40px] text-white bg-[#1890ff] px-3 py-2.5 mr-2 mb-2 w-[6rem] text-sm font-sans font-medium flex items-center justify-center"
+                                  >
+                                    Pick Task
+                                  </Button>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -205,6 +270,30 @@ const Inquiries = () => {
                         </div>
                       </div>
                     )}
+                    <nav
+                      className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
+                      aria-label="Table navigation"
+                    >
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                        Showing{" "}
+                        <span className="font-semibold text-gray-900">
+                          Page {page}{" "}
+                        </span>
+                        of{" "}
+                        <span className="font-semibold text-gray-900">
+                          {totalPages}
+                        </span>
+                      </span>
+                      <div className={`flex justify-end mt-7`}>
+                        <Pagination
+                          defaultCurrent={1}
+                          total={totalPages * 6}
+                          showSizeChanger={false}
+                          onChange={pageHandler}
+                          current={search ? pagewithsearch : page}
+                        />
+                      </div>
+                    </nav>
                   </div>
                 </div>
               </div>

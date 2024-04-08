@@ -169,7 +169,7 @@ const PlayerViewer = () => {
               </div>
             </div>
             <img
-              className="w-[132.49px] h-[40px] mt-6"
+              className="w-[7rem] h-[5rem]"
               src={logo}
               alt="Logo"
             />
@@ -217,7 +217,7 @@ const PlayerViewer = () => {
         accept=".ply"
         onChange={handleFileChange}
       />
-      <div id="canvas-container" style={{ width: "100%", height: "419px", border: "1px solid white" }}></div>
+      <div id="canvas-container" style={{ width: "100%", height: "419px", }}></div>
     </div>
           </div>
           <div className="absolute bottom-0 w-full flex flex-row gap-x-[60px] justify-between px-[44px] pb-[33px]">

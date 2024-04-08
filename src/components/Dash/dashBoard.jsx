@@ -2,7 +2,7 @@ import React from "react";
 import search from "../../Images/search.svg";
 import noData from "../../Images/noData.gif";
 import logo from "../../Images/logo.png";
-import { Popover } from "antd";
+import { Popover, Pagination } from "antd";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useSelector, useDispatch } from "react-redux";
@@ -25,12 +25,18 @@ const DashBoard = () => {
   const [age, setAge] = useState("");
   const [show, setShow] = useState("");
   const [err, setErr] = useState("");
-  const [gender, setGender] = useState(null);
-  const [notes, setNotes] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRows, setTotalRows] = useState(0);
+  const [gender, setGender] = useState("");
+  const [notes, setNotes] = useState("");
   const user = useSelector((state) => state.option);
-  let files = Array.from({ length: 6 }, () => null);
+  // let files = Array.from({ length: 6 }, () => null);
+  const [pagewithsearch, setPagewithsearch] = useState(1);
   const [impressionType, setImpressionType] = useState("");
+  const [files, setFiles] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [search, setSearch] = useState("");
   const router = useNavigate();
   console.log("data", dataUser);
   const inqColumnHeaders = [
@@ -50,54 +56,111 @@ const DashBoard = () => {
     "Impression Type",
     "Status",
   ];
+  const handleClose = () => {
+    setFName("");
+    setLName("");
+    setAge("");
+    setGender("");
+    setImpressionType("");
+    setFiles([]);
+    setNotes("");
+    setAddCase(false);
+  };
   const handleFileChange = (event, index) => {
     const selectedFile = event.target.files[0];
     files[index] = selectedFile;
+    console.log(files);
   };
   const handleChange = (setter) => (event) => {
     setter(event.target.value);
   };
   const submitHandler = async () => {
-    const formData = new FormData();
-    formData.append("firstName", fName);
-    formData.append("lastName", lName);
-    formData.append("age", age);
-    formData.append("gender", gender);
-    formData.append("impressionType", impressionType);
-    formData.append("isRequestPickup", true);
-    formData.append("status", "New Case");
-    await files.forEach((file) => {
-      formData.append("files", file);
-    });
-    formData.append("notes", notes);
+    if (fName === "") {
+      setErr("Please insert first name.");
+      setShow(true);
+    } else if (lName === "") {
+      setErr("Please insert last name.");
+      setShow(true);
+    } else if (age === "") {
+      setErr("Please insert age.");
+      setShow(true);
+    } else if (gender === "") {
+      setErr("Please select gender.");
+      setShow(true);
+    } else if (files.length === 0) {
+      console.log("fileeee", files, files.length);
+      setErr("Please select at least one file.");
+      setShow(true);
+    } else if (impressionType === "") {
+      setErr("Please select Impression.");
+      setShow(true);
+    } else if (notes === "") {
+      setErr("Please insert notes.");
+      setShow(true);
+    } else {
+      const formData = new FormData();
+      formData.append("firstName", fName);
+      formData.append("lastName", lName);
+      formData.append("age", age);
+      formData.append("gender", gender);
+      formData.append("impressionType", impressionType);
+      formData.append("isRequestPickup", true);
+      formData.append("status", "Inreview");
+      await files.forEach((file) => {
+        if (file) formData.append("files", file);
+      });
+      formData.append("notes", notes);
 
-    axios
-      .post("http://91.108.104.16:5000/api/Case/create-case", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-      .then((data) => {
-        setAddCase(false);
-        setErr("New Case Added");
-        setShow(true);
-      })
-      .catch((err) => {});
+      axios
+        .post("http://91.108.104.16:5000/api/Case/create-case", formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        .then((data) => {
+          setAddCase(false);
+          setErr("New Case Added");
+          setShow(true);
+          handleClose();
+          dispatch({ type: "RESET" });
+        })
+        .catch((err) => {});
+    }
   };
   useEffect(() => {
+    setTotalPages(Math.ceil(totalRows / 6));
+    console.log(totalRows, totalPages);
+  }, [totalRows]);
+  useEffect(() => {
     axios
-      .get(`http://91.108.104.16:5000/api/Case/get-all-cases`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      .get(
+        `http://91.108.104.16:5000/api/Case/get-Pending-case?pageNumber=${page}&pageSize=6`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
       .then((data) => {
-        console.log(data);
-        setInquiries(data?.data?.$values);
-        setTasks(data?.data?.$values)
+        console.log(data, "data");
+        setInquiries(data?.data?.cases?.$values);
+        setTasks(data?.data?.cases?.$values);
+        setTotalPages(Math.ceil(data?.data?.count / 6));
       })
       .catch((err) => {});
-  }, [reset]);
+  }, [reset, page]);
+
+  const pageHandler = (e) => {
+    if (search) {
+      // If searching, update searchPage
+      setPagewithsearch(e);
+    } else {
+      // If not searching, update page
+      console.log(e);
+      setPage(e);
+    }
+  };
+
   return (
     <main>
       <div className="flex items-center justify-center flex-col">
@@ -266,12 +329,15 @@ const DashBoard = () => {
                                   <tr
                                     key={index}
                                     className="border-b dark:border-gray-700 bg-gray-50 hover:bg-gray-200 text-md cursor-pointer"
-                                    onClick={() => { {
-                                      dispatch({
-                                        type: "setCaseId",
-                                        num: inq.caseId,
-                                      });
-                                      router("/dashboard/inquiry")}}}
+                                    onClick={() => {
+                                      {
+                                        dispatch({
+                                          type: "setCaseId",
+                                          num: inq.caseId,
+                                        });
+                                        router("/dashboard/inquiry");
+                                      }
+                                    }}
                                   >
                                     <th
                                       scope="row"
@@ -287,10 +353,16 @@ const DashBoard = () => {
                                       className="px-6  py-5"
                                       style={{ whiteSpace: "nowrap" }}
                                     >
-                                      {inq?.firstName} {inq.lastName} / {inq?.$id}
+                                      {inq?.firstName} {inq.lastName} /{" "}
+                                      {inq?.$id}
                                     </td>
-                                    <td className="px-6  py-5"> {inq?.gender}</td>
-                                    <td className="px-6  py-5 capitalize">{inq?.age}</td>
+                                    <td className="px-6  py-5">
+                                      {" "}
+                                      {inq?.gender}
+                                    </td>
+                                    <td className="px-6  py-5 capitalize">
+                                      {inq?.age}
+                                    </td>
 
                                     <td
                                       className="px-3 py-5"
@@ -303,27 +375,46 @@ const DashBoard = () => {
                                       style={{ whiteSpace: "nowrap" }}
                                     >
                                       <span class="inline-flex items-center  min-w-[5rem] flex items-center justify-center text-center px-3.5 py-0.5 rounded-md  text-xs font-medium bg-indigo-100 text-indigo-800">
-                                  {inq.status}
-                                </span>
+                                        {inq.status}
+                                      </span>
                                     </td>
                                     <td
                                       className="px-3 py-5"
                                       style={{ whiteSpace: "nowrap" }}
                                     >
-                                     <Button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    dispatch({
-                                      type: "setCaseId",
-                                      num: inq.caseId,
-                                    });
-                                    router("/dashboard/inquiryEdit");
-                                  }}
-                                  type="primary"
-                                  className="rounded-lg h-[40px] text-white bg-[#1890ff] px-3 py-2.5 mr-2 mb-2 w-[6rem] text-sm font-sans font-medium flex items-center justify-center"
-                                >
-                                  Pick Task
-                                </Button>
+                                      <Button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          axios
+                                            .post(
+                                              `http://91.108.104.16:5000/api/case/pick-case?id=${inq.caseId}`,
+                                              null,
+                                              {
+                                                headers: {
+                                                  Authorization: `Bearer ${token}`,
+                                                },
+                                              }
+                                            )
+                                            .then((data) => {
+                                              dispatch({
+                                                type: "setCaseId",
+                                                num: inq.caseId,
+                                              });
+                                              router("/dashboard/inquiry");
+                                            })
+                                            .catch((err) => {
+                                              console.error(
+                                                "Error during API request:",
+                                                err
+                                              );
+                                              // Add any necessary error handling here
+                                            });
+                                        }}
+                                        type="primary"
+                                        className="rounded-lg h-[40px] text-white bg-[#1890ff] px-3 py-2.5 mr-2 mb-2 w-[6rem] text-sm font-sans font-medium flex items-center justify-center"
+                                      >
+                                        Pick Task
+                                      </Button>
                                     </td>
                                   </tr>
                                 ))}
@@ -337,6 +428,30 @@ const DashBoard = () => {
                               </div>
                             </div>
                           )}
+                          <nav
+                            className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
+                            aria-label="Table navigation"
+                          >
+                            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                              Showing{" "}
+                              <span className="font-semibold text-gray-900">
+                                Page {page}{" "}
+                              </span>
+                              of{" "}
+                              <span className="font-semibold text-gray-900">
+                                {totalPages}
+                              </span>
+                            </span>
+                            <div className={`flex justify-end mt-7`}>
+                              <Pagination
+                                defaultCurrent={1}
+                                total={totalPages * 6}
+                                showSizeChanger={false}
+                                onChange={pageHandler}
+                                current={search ? pagewithsearch : page}
+                              />
+                            </div>
+                          </nav>
                         </div>
                       </div>
                     </div>
@@ -353,7 +468,7 @@ const DashBoard = () => {
                     <div class="">
                       <div class="flex flex-row justify-between items-center">
                         <h1 class="text-2xl ml-2 mtext-xl font-bold text-gray-900 font-semibold">
-                          Inquiries
+                          New Inquiries
                         </h1>
                         <div
                           onClick={() => router("/dashboard/tasks")}
@@ -386,52 +501,61 @@ const DashBoard = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                {tasks.map((inq, index) => (
-                                  <tr
-                                    key={index}
-                                    className="border-b dark:border-gray-700 bg-gray-50 hover:bg-gray-200 text-md cursor-pointer"
-                                    onClick={() => { {
-                                      dispatch({
-                                        type: "setCaseId",
-                                        num: inq.caseId,
-                                      });
-                                      router("/dashboard/taskdetail")}}}
-                                  >
-                                    <th
-                                      scope="row"
-                                      className="px-3 py-5 font-medium text-gray-900  whitespace-nowrap "
+                                  {tasks.map((inq, index) => (
+                                    <tr
+                                      key={index}
+                                      className="border-b dark:border-gray-700 bg-gray-50 hover:bg-gray-200 text-md cursor-pointer"
+                                      onClick={() => {
+                                        {
+                                          dispatch({
+                                            type: "setCaseId",
+                                            num: inq.caseId,
+                                          });
+                                          router("/dashboard/taskdetail");
+                                        }
+                                      }}
                                     >
-                                      <Popover content={inq?.caseId}>
-                                        <div className="inline-block max-w-[120px] whitespace-nowrap overflow-hidden overflow-ellipsis">
-                                          {inq?.caseId}
-                                        </div>
-                                      </Popover>
-                                    </th>
-                                    <td
-                                      className="px-6  py-5"
-                                      style={{ whiteSpace: "nowrap" }}
-                                    >
-                                      {inq?.firstName} {inq.lastName} / {inq?.$id}
-                                    </td>
-                                    <td className="px-6  py-5"> {inq?.gender}</td>
-                                    <td className="px-6  py-5 capitalize">{inq?.age}</td>
+                                      <th
+                                        scope="row"
+                                        className="px-3 py-5 font-medium text-gray-900  whitespace-nowrap "
+                                      >
+                                        <Popover content={inq?.caseId}>
+                                          <div className="inline-block max-w-[120px] whitespace-nowrap overflow-hidden overflow-ellipsis">
+                                            {inq?.caseId}
+                                          </div>
+                                        </Popover>
+                                      </th>
+                                      <td
+                                        className="px-6  py-5"
+                                        style={{ whiteSpace: "nowrap" }}
+                                      >
+                                        {inq?.firstName} {inq.lastName} /{" "}
+                                        {inq?.$id}
+                                      </td>
+                                      <td className="px-6  py-5">
+                                        {" "}
+                                        {inq?.gender}
+                                      </td>
+                                      <td className="px-6  py-5 capitalize">
+                                        {inq?.age}
+                                      </td>
 
-                                    <td
-                                      className="px-3 py-5"
-                                      style={{ whiteSpace: "nowrap" }}
-                                    >
-                                      {inq?.impressionType}
-                                    </td>
-                                    <td
-                                      className="px-3 py-5 "
-                                      style={{ whiteSpace: "nowrap" }}
-                                    >
-                                      <span class="inline-flex items-center  min-w-[5rem] flex items-center justify-center text-center px-3.5 py-0.5 rounded-md  text-xs font-medium bg-indigo-100 text-indigo-800">
-                                  {inq.status}
-                                </span>
-                                    </td>
-                                  </tr>
-                                ))}
+                                      <td
+                                        className="px-3 py-5"
+                                        style={{ whiteSpace: "nowrap" }}
+                                      >
+                                        {inq?.impressionType}
+                                      </td>
+                                      <td
+                                        className="px-3 py-5 "
+                                        style={{ whiteSpace: "nowrap" }}
+                                      >
+                                        <span class="inline-flex items-center  min-w-[5rem] flex items-center justify-center text-center px-3.5 py-0.5 rounded-md  text-xs font-medium bg-indigo-100 text-indigo-800">
+                                          {inq.status}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
                                 </tbody>
                               </table>
                             ) : (
@@ -442,6 +566,30 @@ const DashBoard = () => {
                                 </div>
                               </div>
                             )}
+                            <nav
+                              className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
+                              aria-label="Table navigation"
+                            >
+                              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                                Showing{" "}
+                                <span className="font-semibold text-gray-900">
+                                  Page {page}{" "}
+                                </span>
+                                of{" "}
+                                <span className="font-semibold text-gray-900">
+                                  {totalPages}
+                                </span>
+                              </span>
+                              <div className={`flex justify-end mt-7`}>
+                                <Pagination
+                                  defaultCurrent={1}
+                                  total={totalPages * 6}
+                                  showSizeChanger={false}
+                                  onChange={pageHandler}
+                                  current={search ? pagewithsearch : page}
+                                />
+                              </div>
+                            </nav>
                           </div>
                         </div>
                       </div>
@@ -515,7 +663,7 @@ const DashBoard = () => {
                   disabled=""
                   placeholder="Select Gender"
                 >
-                  <option selected hidden className="text-gray-400">
+                  <option value="" selected hidden className="text-gray-400">
                     Select Gender
                   </option>
                   <option id="male" value="male">
@@ -543,15 +691,9 @@ const DashBoard = () => {
                   <option value="" selected hidden>
                     Select Impression Type
                   </option>
-                  <option value="alginate">Alginate Impressions</option>
-                  <option value="pvs">
-                    Polyvinyl Siloxane (PVS) Impressions
-                  </option>
-                  <option value="polyether">Polyether Impressions</option>
-                  <option value="digital">Digital Impressions</option>
-                  <option value="full-arch">Full Arch Impressions</option>
-                  <option value="partial">Partial Impressions</option>
-                  <option value="triple-tray">Triple Tray Impressions</option>
+                  <option value="Intraoral Scan">Intraoral Scan</option>
+                  <option value="Impression">Impression</option>
+                  <option value="Stl Files">Stl Files</option>
                 </select>
               </div>
               <div className="w-full mb-4">
@@ -565,11 +707,11 @@ const DashBoard = () => {
                         <div className="border-dotted border-2 border-gray-300 cursor-pointer rounded-md p-2 w-full text-center">
                           <label className="w-full flex items-center justify-between">
                             <UploadOutlined style={{ fontSize: "24px" }} />
-                            <p className="text-sm">Upload image or zip files</p>
+                            <p className="text-sm">Upload image or files</p>
                             <input
                               type="file"
                               hidden
-                              accept=".ply,.doc,.docx,image/*"
+                              accept=".ply, .stl, .dcm, .obg, .jpg, .jpeg, .png, .gif, .bmp, .svg"
                               onChange={(event) =>
                                 handleFileChange(event, index)
                               }
@@ -595,7 +737,7 @@ const DashBoard = () => {
           </div>
           <div class="flex justify-between w-full mt-4">
             <button
-              onClick={() => setAddCase(false)}
+              onClick={() => handleClose()}
               class="w-[4rem] whitespace-nowrap hover:bg-gray-600 text-white bg-gray-500 cursor-pointer rounded"
             >
               Close
@@ -613,7 +755,7 @@ const DashBoard = () => {
       <div
         className={`${
           show ? "" : "hidden"
-        } w-[100%] h-[100%] fixed top-0 left-0 bg-slate-500/50 flex justify-center items-center`}
+        } w-[100%] h-[100%] fixed z-[500] top-0 left-0 bg-slate-500/50 flex justify-center items-center`}
       >
         <div className="relative rounded-xl w-[20rem] pb-6 flex items-center p-3 bg-white flex-col">
           <div

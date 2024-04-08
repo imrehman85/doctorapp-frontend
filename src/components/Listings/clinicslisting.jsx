@@ -2,20 +2,25 @@ import React from "react";
 import noData from "../../Images/noData.gif";
 import logo from "../../Images/logo.png";
 import { useState, useEffect } from "react";
-import { Dropdown, Button } from "antd";
+import { Dropdown, Button, Pagination } from "antd";
 import { useNavigate } from "react-router-dom";
 import { LeftOutlined, SearchOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import profile from "../../Images/profile.png";
 import PhoneInput from "react-phone-number-input";
-let file;
+let file="";
 const Tasks = () => {
   const token = useSelector((state) => state.token);
   const reset = useSelector((state) => state.reset);
   const user = useSelector((state) => state.option);
   const [addD, setAddD] = useState(false);
   const dispatch = useDispatch();
+  const [pagewithsearch, setPagewithsearch] = useState(1);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRows, setTotalRows] = useState(0);
   const [prompt, setPrompt] = useState("");
   const [data, setData] = useState("");
   const [display, setDisplay] = useState("");
@@ -47,18 +52,20 @@ const Tasks = () => {
   ]);
 
   useEffect(() => {
+    console.log("ok")
     axios
-      .get(`http://91.108.104.16:5000/api/User/get-all-users`, {
+      .get(`http://91.108.104.16:5000/api/User/get-all-users?pageNumber=${page}&pageSize=6`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
       .then((data) => {
         console.log(data);
-        setData(data?.data?.$values);
+        setData(data?.data?.usersWithRoles?.$values);
+        setTotalPages(Math.ceil(data?.data?.count / 6))
       })
       .catch((err) => {});
-  }, [reset]);
+  }, [reset, page]);
   const router = useNavigate();
 
   const clinicHeaders = [
@@ -78,6 +85,8 @@ const Tasks = () => {
     setUserName("");
     setClinicName("");
     setDisplay("");
+    setImage("")
+    file="";
     setRole(null);
     setPassword("");
   };
@@ -107,6 +116,52 @@ const Tasks = () => {
     }
   };
   const AddHandler = (e) => {
+    if(fName==="")
+    {
+      setErr("Please add First name")
+      setShow(true)
+    }
+    else if(lName==="")
+    {
+      setErr("Please add Last name")
+      setShow(true)
+    }
+    else if(userName==="")
+    {
+      setErr("Please add User name")
+      setShow(true)
+    }
+    else if(email==="")
+    {
+      setErr("Please add Email")
+      setShow(true)
+    }
+    else if(password==="")
+    {
+      setErr("Please add Password")
+      setShow(true)
+    }
+    else if(prompt==="")
+    {
+      setErr("Please add Phone Number")
+      setShow(true)
+    }
+    else if(file==="")
+    {
+      setErr("Please add Profile image")
+      setShow(true)
+    }
+    else if(role===null)
+    {
+      setErr("Please add Role")
+      setShow(true)
+    }
+    else if(clinicName==="")
+    {
+      setErr("Please add Clinic Name")
+      setShow(true)
+    }
+    else{
     let formData = new FormData();
     formData.append("firstName", fName);
     formData.append("lastName", lName);
@@ -125,10 +180,15 @@ const Tasks = () => {
       })
       .then((data) => {
         handleClose();
-        setErr("Doctor Added")
+        setErr("Clinic Added")
         setShow(true);
+        dispatch({type:"RESET"})
       })
-      .catch((err) => {});
+      .catch((err) => {
+        setErr(err.response.data);
+        setShow(true);
+      });  
+    }
   };
   const onClick = (key, item) => {
     if (key.key === "1") {
@@ -142,6 +202,15 @@ const Tasks = () => {
     if (key.key === "3") {
       setDel(item.email);
       setDeleteModal(true);
+    }
+  };
+  const pageHandler = (e) => {
+    if (search) {
+      // If searching, update searchPage
+      setPagewithsearch(e);
+    } else {
+      // If not searching, update page
+      setPage(e);
     }
   };
   return (
@@ -303,6 +372,30 @@ const Tasks = () => {
                         </div>
                       </div>
                     )}
+                    <nav
+                      className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
+                      aria-label="Table navigation"
+                    >
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                        Showing{" "}
+                        <span className="font-semibold text-gray-900">
+                          Page {page}{" "}
+                        </span>
+                        of{" "}
+                        <span className="font-semibold text-gray-900">
+                          {totalPages}
+                        </span>
+                      </span>
+                      <div className={`flex justify-end mt-7`}>
+                        <Pagination
+                          defaultCurrent={1}
+                          total={totalPages*6}
+                          showSizeChanger={false}
+                          onChange={pageHandler}
+                          current={search ? pagewithsearch : page}
+                        />
+                      </div>
+                    </nav>
                   </div>
                 </div>
               </div>
@@ -416,20 +509,11 @@ const Tasks = () => {
                   <option selected hidden className="text-gray-400">
                     Select Role
                   </option>
-                  <option id="TREATMENT_PLANNER" value="Treatment Planner">
-                    Treatment Planner
+                  <option id="Doctor" value="Doctor">
+                    Doctor
                   </option>
-                  <option id="PRODUCTION_MANAGER" value="Production Manager">
-                    Production Manager
-                  </option>
-                  <option
-                    id="DELIVERY_COORDINAOTR"
-                    value="Delivery Coordinator"
-                  >
-                    Delivery Coordinator
-                  </option>
-                  <option id="LAB_ADMIN" value="Lab Admin">
-                    Lab Admin
+                  <option id="dental laboratory" value="Dental laboratory">
+                  Dental laboratory
                   </option>
                 </select>
               </div>
@@ -485,7 +569,7 @@ const Tasks = () => {
       <div
         className={`${
           show ? "" : "hidden"
-        } w-[100%] h-[100%] fixed top-0 left-0 bg-slate-500/50 flex justify-center items-center`}
+        } w-[100%] h-[100%] z-[500] fixed top-0 left-0 bg-slate-500/50 flex justify-center items-center`}
       >
         <div className="relative rounded-xl w-[20rem] pb-6 flex items-center p-3 bg-white flex-col">
           <div
@@ -537,13 +621,17 @@ const Tasks = () => {
                   })
                   .then((data) => {
                     setDeleteModal(false);
-                    dispatch({ type: "Reset" });
+                    setTimeout(() => {
+                      setErr("Clinic Deleted");
+                      setShow(true);
+                    }, 1000);
+                    dispatch({type:"RESET"})
                   })
                   .catch((err) => {
                     console.log(err);
                     setDeleteModal(false);
                     setTimeout(() => {
-                      setShow(true);
+                      // setShow(true);
                       // setErr(err.response.data.message);
                     }, 1000);
                   });

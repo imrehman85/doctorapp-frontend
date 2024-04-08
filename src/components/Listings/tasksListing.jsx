@@ -3,7 +3,7 @@ import noData from "../../Images/noData.gif";
 import { useState, useEffect } from "react";
 import { Radio, Button } from "antd";
 import axios from "axios";
-import { Popover } from "antd";
+import { Popover, Pagination } from "antd";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { LeftOutlined, SearchOutlined } from "@ant-design/icons";
@@ -11,47 +11,16 @@ const Tasks = () => {
   const token = useSelector((state) => state.token);
   const reset = useSelector((state) => state.reset);
   const dispatch = useDispatch();
-  const [tasks, setTasks] = useState([
-    {
-      Clinic: "Boston Diabetes & Endocrine Center",
-      Dentist: "Dr. Mahmoud AbuRahma",
-      Patient: "ABOBAKER SALAH OSMAN / 0000110",
-      Impression: "Type A",
-      ImpressionStatus: "Pending Pickups",
-      Action: "Set Date",
-    },
-    {
-      Clinic: "Clinic XYZ",
-      Dentist: "Dr. Jane Doe",
-      Patient: "John Doe / 0000123",
-      Impression: "Type B",
-      ImpressionStatus: "No Status",
-      Action: "Set Date",
-    },
-    {
-      Clinic: "Dental Clinic ABC",
-      Dentist: "Dr. John Smith",
-      Patient: "Jane Smith / 0000456",
-      Impression: "Type C",
-      ImpressionStatus: "Pending Pickups",
-      Action: "Set Date",
-    },
-  ]);
-  const [tasksComp, setTasksComp] = useState([
-    {
-      Clinic: "Boston Diabetes & Endocrine Center",
-      Dentist: "Dr. Mahmoud AbuRahma",
-      Patient: "ABOBAKER SALAH OSMAN",
-      PatientId: "000110",
-      CompletedDate: "24/01/2024",
-      OrderStatus: "ORDERED",
-    },
-  ]);
-  const [radioValue, setRadioValue] = useState("NEW_ASSIGNED");
+  const [tasks, setTasks] = useState([]);
+  const user = useSelector((state) => state.option);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRows, setTotalRows] = useState(0);
+  const [search, setSearch] = useState("");
+  const [inquiries, setInquiries] = useState([]);
+  const [pagewithsearch, setPagewithsearch] = useState(1);
+  const [status, setStatus] = useState("pending");
 
-  const handleRadioChange = (e) => {
-    setRadioValue(e.target.value);
-  };
   const router = useNavigate();
 
   const tskColumnHeaders = [
@@ -62,18 +31,42 @@ const Tasks = () => {
     "Impression Type",
     "Status",
   ];
+  useEffect(()=>
+  {
+    setTotalPages(Math.ceil(totalRows / 6))
+    console.log(totalRows,totalPages)
+  },[totalRows])
   useEffect(() => {
     axios
-      .get(`http://91.108.104.16:5000/api/Case/get-all-cases`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      .get(
+        `http://91.108.104.16:5000/api/Case/get-${status}-case?pageNumber=${page}&pageSize=6`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
       .then((data) => {
-        setTasks(data?.data?.$values);
+        console.log(data);
+        setTasks(data?.data?.cases?.$values);
+        setTotalPages(Math.ceil(data?.data?.count / 6))
       })
       .catch((err) => {});
-  }, [reset]);
+  }, [reset, status, page]);
+
+  const handleStatusChange = (e) => {
+    console.log(e)
+    setStatus(e.target.value);
+  };
+  const pageHandler = (e) => {
+    if (search) {
+      // If searching, update searchPage
+      setPagewithsearch(e);
+    } else {
+      // If not searching, update page
+      setPage(e);
+    }
+  };
   return (
     <main className="w-full flex items-center justify-center flex-col">
       <div className="w-[95%] flex justify-center">
@@ -105,8 +98,8 @@ const Tasks = () => {
                           id="search-dropdown"
                           className="block p-2.5 pl-10 w-full z-20 text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-l-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:border-blue-500"
                           placeholder="Search"
-                          required=""
-                          value=""
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
                         />
                       </div>
                     </div>
@@ -120,166 +113,132 @@ const Tasks = () => {
                       </span>
                       <div className="flex">
                         <Radio.Group
-                          defaultValue={radioValue}
-                          onChange={handleRadioChange}
+                          defaultValue="Pending"
+                          onChange={handleStatusChange}
                         >
-                          <Radio value="NEW_ASSIGNED" className="mr-2.5">
-                            New Assigned
+                          <Radio value="Pending" className="mr-2.5">
+                            New Inquiries
                           </Radio>
-                          <Radio value="IN_PROGRESS" className="mr-2.5">
-                            In Progress
-                          </Radio>
-                          <Radio value="PENDING_APPROVAL" className="mr-2.5">
+                          <Radio value="inreview" className="mr-2.5">
                             Pending Approval
                           </Radio>
-                          <Radio value="COMPLETED" className="mr-2.5">
-                            Completed
+                          <Radio value="reviewed">
+                            Pending Revisions
                           </Radio>
+                          <Radio value="pending-completed">
+                            Pending Complete
+                          </Radio>
+                          <Radio value="completed">Completed</Radio>
                         </Radio.Group>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div>
-                  {radioValue !== "COMPLETED" && (
-                    <div className="overflow-x-auto">
-                      {tasks.length !== 0 ? (
-                        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-600">
-                          <thead className="text-xs text-gray-700 uppercase bg-gray-300 text-black">
-                            <tr>
-                              {tskColumnHeaders.map((columnHeader, index) => (
-                                <th
-                                  key={index}
-                                  scope="col"
-                                  className="px-6 py-3 font-semibold tracking-wider"
-                                >
-                                  {columnHeader}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
+                  <div className="overflow-x-auto">
+                    {tasks.length !== 0 ? (
+                      <table className="w-full text-sm text-left text-gray-500 dark:text-gray-600">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-300 text-black">
+                          <tr>
+                            {tskColumnHeaders.map((columnHeader, index) => (
+                              <th
+                                key={index}
+                                scope="col"
+                                className="px-6 py-3 font-semibold tracking-wider"
+                              >
+                                {columnHeader}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
                           {tasks.map((inq, index) => (
-                                  <tr
-                                    key={index}
-                                    className="border-b dark:border-gray-700 bg-gray-50 hover:bg-gray-200 text-md cursor-pointer"
-                                    onClick={() => { {
-                                      dispatch({
-                                        type: "setCaseId",
-                                        num: inq.caseId,
-                                      });
-                                      router("/dashboard/taskdetail")}}}
-                                  >
-                                    <th
-                                      scope="row"
-                                      className="px-3 py-5 font-medium text-gray-900  whitespace-nowrap "
-                                    >
-                                      <Popover content={inq?.caseId}>
-                                        <div className="inline-block max-w-[120px] whitespace-nowrap overflow-hidden overflow-ellipsis">
-                                          {inq?.caseId}
-                                        </div>
-                                      </Popover>
-                                    </th>
-                                    <td
-                                      className="px-6  py-5"
-                                      style={{ whiteSpace: "nowrap" }}
-                                    >
-                                      {inq?.firstName} {inq.lastName} / {inq?.$id}
-                                    </td>
-                                    <td className="px-6  py-5"> {inq?.gender}</td>
-                                    <td className="px-6  py-5 capitalize">{inq?.age}</td>
+                            <tr
+                              key={index}
+                              className="border-b dark:border-gray-700 bg-gray-50 hover:bg-gray-200 text-md cursor-pointer"
+                              onClick={() => {
+                                {
+                                  dispatch({
+                                    type: "setCaseId",
+                                    num: inq.caseId,
+                                  });
+                                  router("/dashboard/taskdetail");
+                                }
+                              }}
+                            >
+                              <th
+                                scope="row"
+                                className="px-3 py-5 font-medium text-gray-900  whitespace-nowrap "
+                              >
+                                <Popover content={inq?.caseId}>
+                                  <div className="inline-block max-w-[120px] whitespace-nowrap overflow-hidden overflow-ellipsis">
+                                    {inq?.caseId}
+                                  </div>
+                                </Popover>
+                              </th>
+                              <td
+                                className="px-6  py-5"
+                                style={{ whiteSpace: "nowrap" }}
+                              >
+                                {inq?.firstName} {inq.lastName}{" "}
+                                {inq?.$id ? "/" : ""} {inq?.$id}
+                              </td>
+                              <td className="px-6  py-5"> {inq?.gender}</td>
+                              <td className="px-6  py-5 capitalize">
+                                {inq?.age}
+                              </td>
 
-                                    <td
-                                      className="px-3 py-5"
-                                      style={{ whiteSpace: "nowrap" }}
-                                    >
-                                      {inq?.impressionType}
-                                    </td>
-                                    <td
-                                      className="px-3 py-5 "
-                                      style={{ whiteSpace: "nowrap" }}
-                                    >
-                                      <span class="inline-flex items-center  min-w-[5rem] flex items-center justify-center text-center px-3.5 py-0.5 rounded-md  text-xs font-medium bg-indigo-100 text-indigo-800">
+                              <td
+                                className="px-3 py-5"
+                                style={{ whiteSpace: "nowrap" }}
+                              >
+                                {inq?.impressionType}
+                              </td>
+                              <td
+                                className="px-3 py-5 "
+                                style={{ whiteSpace: "nowrap" }}
+                              >
+                                <span class="inline-flex items-center  min-w-[5rem] flex items-center justify-center text-center px-3.5 py-0.5 rounded-md  text-xs font-medium bg-indigo-100 text-indigo-800">
                                   {inq.status}
                                 </span>
-                                    </td>
-                                  </tr>
-                                ))}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <div class="mb-10 ">
-                          <div class="flex items-center justify-center w-full h-72 text-lg text-gray-500 dark:text-gray-400 flex-col shadow">
-                            <img src={noData} class="mr-3" />
-                            No Data
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {/* {radioValue === "COMPLETED" && (
-                    <div className="overflow-x-auto">
-                      {tasks.length !== 0 && radioValue === "COMPLETED" ? (
-                        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-600">
-                          <thead className="text-xs text-gray-700 uppercase bg-gray-300 text-black">
-                            <tr>
-                              {tskColumnHeadersComp.map(
-                                (columnHeader, index) => (
-                                  <th
-                                    key={index}
-                                    scope="col"
-                                    className="px-6 py-3 font-semibold tracking-wider"
-                                  >
-                                    {columnHeader}
-                                  </th>
-                                )
-                              )}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {tasksComp.map((inq, index) => (
-                              <tr
-                                onClick={() =>
-                                  router("/dashboard/taskCompdetail")
-                                }
-                                key={index}
-                                className="border-b dark:border-gray-700 bg-gray-50 hover:bg-gray-200 text-md cursor-pointer"
-                              >
-                                <td
-                                  scope="row"
-                                  className="px-3 py-5 font-medium text-gray-900  whitespace-nowrap "
-                                >
-                                  {inq.Clinic}
-                                </td>
-                                <td
-                                  className="px-6  py-5"
-                                  style={{ whiteSpace: "nowrap" }}
-                                >
-                                  {inq.Dentist}
-                                </td>
-                                <td className="px-6  py-5">{inq.Patient} / {inq.PatientId}</td>
-                                <td className="px-6  py-5 capitalize">
-                                  {inq.CompletedDate}
-                                </td>
-                                <td className="px-6  py-5 capitalize">
-                                  <span class="inline-flex items-center  min-w-max px-3.5 py-0.5 rounded-md  text-xs font-medium bg-indigo-100 text-indigo-800">
-                                    {inq.OrderStatus}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <div class="mb-10 ">
-                          <div class="flex items-center justify-center w-full h-72 text-lg text-gray-500 dark:text-gray-400 flex-col shadow">
-                            <img src={noData} class="mr-3" />
-                            No Data
-                          </div>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div class="mb-10 ">
+                        <div class="flex items-center justify-center w-full h-72 text-lg text-gray-500 dark:text-gray-400 flex-col shadow">
+                          <img src={noData} class="mr-3" />
+                          No Data
                         </div>
-                      )}
-                    </div>
-                  )} */}
+                      </div>
+                    )}
+                    <nav
+                      className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
+                      aria-label="Table navigation"
+                    >
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                        Showing{" "}
+                        <span className="font-semibold text-gray-900">
+                          Page {page}{" "}
+                        </span>
+                        of{" "}
+                        <span className="font-semibold text-gray-900">
+                          {totalPages}
+                        </span>
+                      </span>
+                      <div className={`flex justify-end mt-7`}>
+                        <Pagination
+                          defaultCurrent={1}
+                          total={totalPages*6}
+                          showSizeChanger={false}
+                          onChange={pageHandler}
+                          current={search ? pagewithsearch : page}
+                        />
+                      </div>
+                    </nav>
+                  </div>
                 </div>
               </div>
             </div>
